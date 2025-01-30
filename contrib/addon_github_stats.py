@@ -21,7 +21,6 @@
 # *                                                                         *
 # ***************************************************************************
 
-import gitlab
 import json
 import requests
 import os
@@ -30,9 +29,14 @@ from typing import List, Dict, Tuple
 
 # CONFIGURATION
 addon_list_url = "https://raw.githubusercontent.com/FreeCAD/FreeCAD-addons/master/.gitmodules"
-gitlab_access_token = ""  # Read from the file specified by the environment variable GITLAB_ACCESS_TOKEN_FILE
 github_access_token = ""  # Read from the file specified by the environment variable GITHUB_ACCESS_TOKEN_FILE
 
+
+# SERVER SETUP
+# This script should be run by a user configured with permissions to create and edit web-accessible files, and is
+# expected to be run as a daily cron job, e.g.
+#
+# 0 0 * * * export GITHUB_ACCESS_TOKEN_FILE=/var/www/github_access_token; cd /var/www/freecad-homepage/contrib && python3 addon_github_stats.py
 
 class StatsWriter:
 
@@ -52,9 +56,7 @@ class StatsWriter:
 
     def setup_tokens(self):
         """Load the API access tokens from the files specified in the appropriate environment variables."""
-        global gitlab_access_token
         global github_access_token
-        gitlab_access_token = self.get_token("GITLAB_ACCESS_TOKEN_FILE")
         github_access_token = self.get_token("GITHUB_ACCESS_TOKEN_FILE")
 
     @staticmethod
@@ -96,7 +98,8 @@ class StatsWriter:
         if parsed_url.netloc == "github.com":
             return self.get_stats_for_github_repo(repo_url)
         else:
-            return self.get_stats_for_gitlab_repo(repo_url)
+            return None
+            #return self.get_stats_for_gitlab_repo(repo_url)
 
     def get_stats_for_github_repo(self, repo_url: str) -> Dict[str, int]:
         community, project = self.get_community_and_project(repo_url)
@@ -110,16 +113,15 @@ class StatsWriter:
             return {}
         return self.process_github_stats(result.text)
 
-    def get_stats_for_gitlab_repo(self, repo_url: str) -> Dict[str, int]:
-        return
-        gl = gitlab.Gitlab(private_token=gitlab_access_token)
-        community, project = self.get_community_and_project(repo_url)
-        try:
-            gl_project = gl.projects.get(f"{community}/{project}")
-            # TODO: Support gitlab projects...
-        except gitlab.exceptions.GitlabGetError:
-            print(f"Failed to load data from gitlab for {repo_url}")
-            return {}
+    #def get_stats_for_gitlab_repo(self, repo_url: str) -> Dict[str, int]:
+    #    gl = gitlab.Gitlab(private_token=gitlab_access_token)
+    #    community, project = self.get_community_and_project(repo_url)
+    #    try:
+    #        gl_project = gl.projects.get(f"{community}/{project}")
+    #        # TODO: Support gitlab projects...
+    #    except gitlab.exceptions.GitlabGetError:
+    #        print(f"Failed to load data from gitlab for {repo_url}")
+    #        return {}
 
     @staticmethod
     def get_community_and_project(repo_url: str) -> Tuple[str, str]:
